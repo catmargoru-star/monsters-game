@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Пиксель-Монстры: Уютная Банда</title>
+
+<!-- Подключение VK Bridge -->
+<script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+
+<style>
+  :root, body.theme-pink { --bg-main: #fffbfe; --bg-topbar: #fce4ec; --bg-card: #ffffff; --text-dark: #6d6875; --text-light: #9a8c98; --btn-main: #f8bbd0; --btn-shadow: #e5a2b6; --btn-accent: #b2dfdb; --btn-accent-shadow: #8cbab6; }
+  body.theme-mint { --bg-main: #f2fcf5; --bg-topbar: #dcfce7; --bg-card: #ffffff; --text-dark: #475569; --text-light: #94a3b8; --btn-main: #bbf7d0; --btn-shadow: #86efac; --btn-accent: #fbcfe8; --btn-accent-shadow: #f9a8d4; }
+  body.theme-lavender { --bg-main: #faf5ff; --bg-topbar: #f3e8ff; --bg-card: #ffffff; --text-dark: #4c1d95; --text-light: #a78bfa; --btn-main: #e9d5ff; --btn-shadow: #d8b4fe; --btn-accent: #a7f3d0; --btn-accent-shadow: #6ee7b7; }
+
+  .room-theme-pink { --c-ceil: #f4dce3; --c-wall-left: #fce4ec; --c-wall-right: #fce4ec; --c-wall-back: #f8bbd0; --c-floor: #fce4b3; }
+  .room-theme-mint { --c-ceil: #dcfce7; --c-wall-left: #f0fdf4; --c-wall-right: #f0fdf4; --c-wall-back: #bbf7d0; --c-floor: #fef08a; }
+  .room-theme-lavender { --c-ceil: #f3e8ff; --c-wall-left: #faf5ff; --c-wall-right: #faf5ff; --c-wall-back: #e9d5ff; --c-floor: #fcd34d; }
+  .room-theme-dark { --c-ceil: #2c3e50; --c-wall-left: #34495e; --c-wall-right: #34495e; --c-wall-back: #1a252f; --c-floor: #4e342e; }
+
+  * { box-sizing: border-box; user-select: none; }
+  body { background: var(--bg-main); margin: 0; font-family: 'Nunito', 'Segoe UI', system-ui, sans-serif; color: var(--text-dark); display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; transition: background 0.3s; }
+  
+  .app { width: 100%; max-width: 400px; height: 100vh; background: var(--bg-main); display: flex; flex-direction: column; position: relative; }
+
+  .topbar { 
+    display: flex; justify-content: space-between; align-items: center; 
+    margin-left: 65px; padding: 10px 10px; 
+    background: var(--bg-topbar); font-size: 10px; font-weight: 800; 
+    border-bottom: 2px solid var(--btn-main); border-radius: 0 0 20px 20px; 
+    z-index: 10; transition: background 0.3s; 
+  }
+  
+  .val { color: #f57c00; } .val-gem { color: #29b6f6; } .val-candy { color: #ec407a; } .val-lvl { color: #ffa000; } .val-pets { color: #66bb6a; }
+  
+  .ui-item { position: relative; cursor: pointer; display: flex; align-items: center; gap: 3px; transition: transform 0.1s;}
+  .ui-item:active { transform: scale(0.9); }
+  
+  .energy-bar-bg { width: 30px; height: 8px; background: #ccc; border-radius: 4px; overflow: hidden; position: relative; }
+  .energy-bar-fill { height: 100%; background: #00bcd4; width: 100%; transition: width 0.3s; }
+
+  .screen { 
+    display: none; flex: 1; overflow-y: auto; 
+    margin-left: 65px; padding: 15px; padding-bottom: 20px; 
+  }
+  .screen.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  h3 { color: var(--text-dark); text-align: center; margin: 0 0 15px 0; font-weight: 800; letter-spacing: 1px; }
+
+  .room-wrapper { width: 100%; position: relative; border: 6px solid #fff; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); transition: height 0.5s ease, background 0.3s; height: 340px; overflow: hidden; }
+  .room-part { position: absolute; inset: 0; pointer-events: none; transition: background 0.3s; }
+  .ceiling { clip-path: polygon(0 0, 100% 0, 75% 10%, 25% 10%); background: var(--c-ceil); }
+  .wall-left { clip-path: polygon(0 0, 25% 10%, 25% 55%, 0 100%); background: var(--c-wall-left); }
+  .wall-right { clip-path: polygon(100% 0, 75% 10%, 75% 55%, 100% 100%); background: var(--c-wall-right); }
+  .wall-back { clip-path: polygon(25% 10%, 75% 10%, 75% 55%, 25% 55%); background: var(--c-wall-back); }
+  .floor { clip-path: polygon(0 100%, 25% 55%, 75% 55%, 100% 100%); background: var(--c-floor); background-image: repeating-linear-gradient(0deg, transparent, transparent 15px, rgba(0,0,0,0.04) 15px, rgba(0,0,0,0.04) 18px); }
+  .window-group { position: absolute; top: 15%; left: 50%; transform: translateX(-50%); width: 50px; height: 70px; z-index: 2; pointer-events: none; }
+  .window-frame { position: absolute; inset: 0; border: 4px solid #fff; border-radius: 8px; box-shadow: inset 0 0 15px rgba(135, 206, 235, 0.8); background: rgba(200, 240, 255, 0.3); }
+
+  .decor-item { position: absolute; z-index: 1; cursor: grab; touch-action: none; transition: transform 0.1s; }
+  .decor-item:active { cursor: grabbing; transform: scale(1.1); z-index: 50; }
+  .decor-rug { width: 120px; height: 70px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+  .rug-pink { background: repeating-linear-gradient(45deg, #ff9a9e, #ff9a9e 10px, #fad0c4 10px, #fad0c4 20px); }
+  .rug-mint { background: repeating-linear-gradient(45deg, #a1ffce, #a1ffce 10px, #faffd1 10px, #faffd1 20px); }
+  .rug-lav { background: repeating-linear-gradient(45deg, #e0c3fc, #e0c3fc 10px, #8ec5fc 10px, #8ec5fc 20px); }
+  .decor-lamp { font-size: 30px; }
+  .decor-plant { font-size: 35px; }
+
+  .street-wrapper { width: 100%; height: 240px; position: relative; border: 6px solid #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); background: linear-gradient(#87ceeb 0%, #87ceeb 40%, #4a7c3f 40%, #2d5a27 100%); }
+  .grass-pattern { position: absolute; bottom: 0; left: 0; right: 0; height: 60%; background: repeating-linear-gradient(90deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px); pointer-events: none; }
+
+  .monster-container { position: absolute; width: 45px; height: 45px; cursor: grab; z-index: 5; touch-action: none; }
+  .monster-container:active { cursor: grabbing; }
+  .monster-container:hover { z-index: 10; }
+  .monster-container:hover .tooltip { opacity: 1; transform: translateX(-50%) scale(1); }
+  
+  .monster-svg { width: 100%; height: 100%; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.15)); pointer-events: none; }
+  
+  .hat { position: absolute; z-index: 6; pointer-events: none; top: -15px; left: 50%; transform: translateX(-50%); font-size: 20px; width: 30px; height: 30px; display: flex; justify-content: center; align-items: center;}
+
+  .street-monster { 
+    position: absolute; 
+    width: 50px; height: 50px; 
+    cursor: pointer; 
+    z-index: 10; 
+    touch-action: manipulation;
+    animation: jump 0.6s infinite alternate; 
+  }
+  @keyframes jump { from { transform: translateY(0px); } to { transform: translateY(-15px); } }
+
+  .tooltip { position: absolute; top: -55px; left: 50%; transform: translateX(-50%) scale(0.8); background: rgba(255, 255, 255, 0.95); border: 2px solid var(--btn-main); padding: 6px 10px; border-radius: 10px; font-size: 10px; font-weight: 800; color: var(--text-dark); white-space: nowrap; pointer-events: none; opacity: 0; transition: all 0.2s; z-index: 20; text-align: center; line-height: 1.4; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+  .tooltip::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); border-width: 6px 6px 0; border-style: solid; border-color: #fff transparent transparent transparent; }
+  .tt-stats { margin-top: 4px; font-size: 11px; color: var(--text-light); }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(109, 104, 117, 0.6); backdrop-filter: blur(3px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+  .modal-overlay.active { display: flex; animation: fadeIn 0.3s ease; }
+  .modal-box { background: #fff; border-radius: 20px; padding: 20px; width: 85%; max-width: 300px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border: 4px solid var(--btn-main); transform: scale(0.9); transition: transform 0.3s; }
+  .modal-overlay.active .modal-box { transform: scale(1); }
+  .modal-svg { width: 90px; height: 90px; margin: 10px auto; position: relative;}
+  .rarity-label { font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 10px; display: inline-block; margin-top: 5px; }
+
+  .card { background: var(--bg-card); border-radius: 16px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 3px solid var(--bg-topbar); }
+  .btn { width: 100%; padding: 10px; font-size: 13px; font-family: inherit; font-weight: 800; background: var(--btn-main); color: var(--text-dark); border: none; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 0 var(--btn-shadow); transition: all 0.1s; margin-bottom: 5px; }
+  .btn:active { transform: translateY(4px); box-shadow: none; }
+  .btn:disabled { opacity: 0.5; pointer-events: none; }
+  .btn-mint { background: var(--btn-accent); color: var(--text-dark); box-shadow: 0 4px 0 var(--btn-accent-shadow); }
+
+  .shop-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .shop-item { background: #fff; border: 2px solid var(--btn-main); border-radius: 12px; padding: 8px; text-align: center; cursor: pointer; position: relative;}
+  .shop-item .icon { font-size: 26px; }
+  .shop-item .title { font-size: 10px; font-weight: 800; margin: 4px 0;}
+  .shop-item .price { color: #f57c00; font-weight: 800; font-size: 11px; }
+  .shop-item .bonus { font-size: 8px; color: var(--text-light); margin-top: 4px; line-height: 1.2;}
+
+  .monster-list { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .mon-slot { background: #fff; border: 3px solid var(--bg-topbar); border-radius: 12px; padding: 5px; cursor: pointer; text-align: center; width: 65px; position: relative;}
+  .mon-slot.selected { border-color: var(--btn-shadow); background: #fafafa; }
+  .mon-slot .svg-container { width: 35px; height: 35px; margin: 0 auto; position: relative;}
+  .mon-slot .name { font-size: 8px; font-weight: bold; margin-top: 2px; }
+
+  .collection-header { text-align: center; font-size: 14px; font-weight: 900; color: var(--text-dark); margin-bottom: 15px; }
+  .collection-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .col-item { background: #fff; border-radius: 10px; padding: 5px; text-align: center; position: relative; border: 2px solid var(--bg-topbar); box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; aspect-ratio: 1; }
+  .col-item.locked { background: #e0e0e0; border-color: #ccc; }
+  .col-item.locked .col-svg { filter: brightness(0) opacity(0.2); }
+  .col-item.locked .col-name { color: #999; }
+  .col-item .col-svg { width: 30px; height: 30px; margin-bottom: 2px; }
+  .col-item .col-name { font-size: 8px; font-weight: bold; color: var(--text-dark); line-height: 1.1; }
+  .col-item .question-mark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 900; color: rgba(0,0,0,0.3); pointer-events: none; }
+
+  .log { background: #fafafa; height: 100px; overflow-y: auto; border-radius: 12px; padding: 10px; font-size: 11px; color: var(--text-light); border: 2px dashed var(--btn-main); margin-top: 10px; }
+  .log-success { color: #66bb6a; font-weight: bold; }
+  .log-fail { color: #ef5350; font-weight: bold; }
+
+  .theme-circles { display: flex; gap: 15px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+  .theme-circle { width: 35px; height: 35px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: transform 0.2s; }
+  .theme-circle:hover { transform: scale(1.1); }
+
+  .league-header { text-align: center; font-size: 16px; font-weight: 900; color: #f57c00; margin-bottom: 10px; }
+  .timer-box { background: #fff; border: 2px solid #ffb300; border-radius: 12px; padding: 10px; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(255, 179, 0, 0.2); }
+  .timer-val { font-size: 18px; font-weight: 900; color: #e65100; font-family: monospace; }
+  .leaderboard-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px dashed #ddd; font-weight: bold; font-size: 12px; }
+  .leaderboard-row.me { background: #fff9c4; border-radius: 8px; color: #d84315; }
+
+  .tabbar { 
+    position: absolute; top: 0; left: 0; bottom: 0; width: 65px; 
+    display: flex; flex-direction: column; 
+    background: #fff; border-right: 3px solid var(--bg-topbar); 
+    border-radius: 0 20px 20px 0; box-shadow: 4px 0 15px rgba(0,0,0,0.05); 
+    z-index: 10; overflow-y: auto; overflow-x: hidden;
+  }
+  .tab-btn { 
+    flex-shrink: 0; width: 100%; padding: 12px 0; border: none; 
+    background: none; color: #b5a1a4; font-family: inherit; font-size: 8px; 
+    font-weight: 700; cursor: pointer; display: flex; flex-direction: column; 
+    align-items: center; gap: 4px; transition: all 0.2s; 
+  }
+  .tab-btn .icon { font-size: 18px; filter: grayscale(0.5); }
+  .tab-btn.active { color: var(--text-dark); background: #fafafa; border-right: 3px solid var(--btn-main); }
+  .tab-btn.active .icon { filter: grayscale(0); transform: scale(1.2); }
+  
+  .coin-icon { display: inline-block; width: 14px; height: 14px; background: radial-gradient(circle at 30% 30%, #ffd54f, #f57f17); border-radius: 50%; border: 2px solid #fbc02d; box-shadow: inset 0 0 4px rgba(255,255,255,0.8), 0 1px 3px rgba(0,0,0,0.2); position: relative; }
+  .coin-icon::after { content: '★'; position: absolute; top: -1px; left: 1px; font-size: 8px; color: rgba(255,255,255,0.8); }
+
+  .xp-bar-container { width: 100%; height: 4px; background: #eee; position: absolute; top: 0; left: 0; z-index: 20; }
+  .xp-bar { height: 100%; background: #ffa000; width: 0%; transition: width 0.3s; }
+  .name-input { width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--btn-main); font-family: inherit; font-weight: bold; text-align: center; outline: none; }
+
+  #foundPanel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8); background: #fff; border-radius: 20px; padding: 20px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.2); border: 4px solid #ffca28; z-index: 500; display: none; opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); width: 80%; max-width: 260px; }
+  #foundPanel.active { display: block; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #foundPanel .found-title { font-size: 16px; font-weight: 900; color: #e65100; margin-bottom: 10px; }
+  #foundPanel .found-icon { margin-bottom: 10px; display: flex; justify-content: center; }
+  #foundPanel .found-name { font-size: 14px; font-weight: 800; color: var(--text-dark); margin-bottom: 15px; }
+
+  .float-text { position: absolute; color: #4caf50; font-weight: 900; font-size: 16px; pointer-events: none; animation: floatUp 1s forwards; z-index: 100; text-shadow: 1px 1px 2px white; }
+  @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-40px); opacity: 0; } }
+
+  #infoModal .modal-box { border-color: #64b5f6; max-width: 300px; text-align: left; }
+  #infoModal .info-title { font-size: 16px; font-weight: 900; color: #1565c0; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  #infoModal .info-text { font-size: 13px; color: var(--text-dark); line-height: 1.5; margin-bottom: 20px; background: #f0f8ff; padding: 12px; border-radius: 10px; border: 1px solid #bbdefb; }
+  .info-btn { background: #e3f2fd; color: #1565c0; border: 2px solid #64b5f6; border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-left: 5px; cursor: pointer; }
+</style>
+</head>
+<body class="theme-pink">
+
+<div class="app">
+  <div class="xp-bar-container"><div class="xp-bar" id="xp-bar"></div></div>
+  
+  <div class="topbar">
+    <div class="ui-item" onclick="showInfo('Монеты', 'Основная валюта игры. Нужна для покупки шапок, мебели и конфет.', '🪙')">
+      <span class="coin-icon"></span> <span class="val" id="ui-coins">15000</span>
+    </div>
+    <div class="ui-item" onclick="showInfo('Камни', 'Редкая валюта. Дается за победы в набегах и повышение уровня.', '💎')">
+      <span>💎</span> <span class="val-gem" id="ui-gems">5</span>
+    </div>
+    <div class="ui-item" onclick="showInfo('Конфеты', 'Еда для монстриков. Тратится при кормлении (5 шт) и скрещивании (20 шт).', '🍬')">
+      <span>🍬</span> <span class="val-candy" id="ui-candies">50</span>
+    </div>
+    <div class="ui-item" onclick="showInfo('Уровень', 'Растет, когда ты кормишь монстров и ловишь новых.', '⭐')">
+      <span>⭐</span> <span class="val-lvl" id="ui-level">1</span>
+    </div>
+    <div class="ui-item" id="energy-tooltip-item" onclick="showInfo('Энергия', 'Тратится на поиск, воровство и атаки. Восстанавливается по 1 каждые 5 сек.', '⚡')">
+      <span>⚡</span> <div class="energy-bar-bg"><div class="energy-bar-fill" id="ui-energy-bar"></div></div>
+    </div>
+    <div class="ui-item" onclick="showInfo('Монстрики', 'Количество твоих питомцев. Расширь комнату, чтобы поместилось больше.', '🐾')">
+      <span>🐾</span> <span class="val-pets" id="ui-pets">2/3</span>
+    </div>
+    <button class="btn" style="width:auto;padding:2px 4px;margin:0;font-size:12px;background:#ffca28;" onclick="watchAd()" title="Смотреть рекламу (+50 энергии)">📺</button>
+  </div>
+
+  <div class="screen active" id="screen-room">
+    <div class="room-wrapper room-theme-pink" id="room">
+      <div class="room-part ceiling"></div><div class="room-part wall-left"></div><div class="room-part wall-back"></div><div class="room-part wall-right"></div><div class="room-part floor"></div>
+      <div class="window-group"><div class="window-frame"></div></div>
+      
+      <div id="decor-container"></div>
+      <div id="pets-container"></div>
+    </div>
+    <p style="text-align:center; font-size:11px; color:var(--text-light); margin-top:15px; font-weight: 600;">Зажми и потяни. Кликни — чтобы покормить.</p>
+  </div>
+
+  <div class="screen" id="screen-collection">
+    <h3>📖 Коллекция</h3>
+    <div class="collection-header" id="collection-progress">Открыто: 2 / 100</div>
+    <div class="collection-grid" id="collection-grid"></div>
+  </div>
+
+  <div class="screen" id="screen-street">
+    <div class="street-wrapper" id="street">
+      <div class="grass-pattern"></div>
+    </div>
+    <button class="btn btn-mint" style="margin-top:15px;" id="searchBtn" onclick="searchMonster()">🔍 Искать (15 ⚡)</button>
+    <div style="text-align:center; margin-top:10px;">
+      <span class="info-btn" onclick="showInfo('Поиск монстров', 'Ищет случайного монстра или конфеты в траве. Стоит 15 энергии. Если логово заполнено — новый монстр не поместится!', '🔍')">i</span>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-steal">
+    <h3>🥷 Набеги</h3>
+    <div class="card">
+      <button class="btn" onclick="trySteal()">🍬 Украсть конфеты (20 ⚡)</button>
+      <div style="font-size:10px; color:var(--text-light); text-align:center; margin-top:5px;">Шанс 70%. При провале отберут 5 конфет.</div>
+    </div>
+    <div class="card">
+      <button class="btn btn-mint" onclick="tryAttack()">💥 Атаковать врага (30 ⚡)</button>
+      <div style="font-size:10px; color:var(--text-light); text-align:center; margin-top:5px;">Шанс 60%. Награда: 1 💎 и 50 монет.</div>
+    </div>
+    <div class="log" id="steal-log">> Система готова к набегу...</div>
+  </div>
+
+  <div class="screen" id="screen-league">
+    <h3>🏆 Турнир</h3>
+    <div class="league-header" id="league-name">🥉 Бронзовая Лига</div>
+    <div class="timer-box">
+      <div style="font-size:12px; color:var(--text-light);">До конца турнира</div>
+      <div class="timer-val" id="league-timer">0д 0ч 0м 0с</div>
+    </div>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; font-weight:900; margin-bottom:10px; color:var(--text-dark);">
+        <span>Мои очки:</span>
+        <span id="league-my-points" style="color:#d84315;">0</span>
+      </div>
+      <div id="leaderboard-container"></div>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-shop">
+    <h3>🛒 Магазин</h3>
+    
+    <div class="card" style="border-color: #29b6f6; background: #e1f5fe;">
+      <div style="font-weight:bold; margin-bottom:10px; text-align:center; color:#0277bd; font-size:13px;">💎 Обмен камней на монеты 🪙</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button class="btn" style="background:#81d4fa; box-shadow:0 4px 0 #4fc3f7; margin:0; font-size:11px;" onclick="exchangeGems(10000, 5)">
+          10 000 <span class="coin-icon"></span> за 5 💎
+        </button>
+        <button class="btn" style="background:#4fc3f7; box-shadow:0 4px 0 #29b6f6; margin:0; font-size:11px;" onclick="exchangeGems(50000, 20)">
+          50 000 <span class="coin-icon"></span> за 20 💎
+        </button>
+        <button class="btn" style="background:#29b6f6; color:white; box-shadow:0 4px 0 #0288d1; margin:0; font-size:11px;" onclick="exchangeGems(150000, 50)">
+          150 000 <span class="coin-icon"></span> за 50 💎
+        </button>
+      </div>
+    </div>
+
+    <div class="slider-group" style="background:#fff; padding:10px; border-radius:10px; margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn btn-mint" style="padding:4px 8px; margin:0; flex:1; font-size:11px;" onclick="buy('candy', 10, 50)">10 🍬 / 50 <span class="coin-icon"></span></button>
+      <button class="btn" style="padding:4px 8px; margin:0; flex:1; font-size:11px;" onclick="buy('candy', 50, 200)">50 🍬 / 200 <span class="coin-icon"></span></button>
+    </div>
+
+    <div class="card" style="border-color: #ffb300;">
+      <div style="font-weight:bold; margin-bottom:10px; text-align:center; color:#e65100; font-size:13px;">🏠 Расширение комнаты</div>
+      <button class="btn" style="background:#ffe082; box-shadow:0 4px 0 #ffca28;" id="expandBtn" onclick="expandRoom()">Расширить (Цена)</button>
+    </div>
+
+    <h4 style="margin: 10px 0; color: var(--text-dark); font-size:13px;">🛋️ Интерьер</h4>
+    <div class="shop-grid" id="interior-shop"></div>
+
+    <h4 style="margin: 20px 0 10px 0; color: var(--text-dark); font-size:13px;">🎩 Шапки</h4>
+    <div class="shop-grid" id="hat-shop"></div>
+  </div>
+
+  <div class="screen" id="screen-inventory">
+    <h3>🎒 Склад</h3>
+    <p style="text-align:center; font-size:11px; color:var(--text-light);">Управляй купленной мебелью</p>
+    <div class="shop-grid" id="inventory-shop"></div>
+  </div>
+
+  <div class="screen" id="screen-wardrobe">
+    <h3>🎩 Шляпная</h3>
+    <div class="monster-list" id="wardrobe-slots"></div>
+  </div>
+
+  <div class="screen" id="screen-profile">
+    <h3>⚙️ Профиль</h3>
+    <div class="card" style="border-color: #4caf50; background: #e8f5e9;">
+      <div style="font-weight:bold; margin-bottom:10px; text-align:center; color:#2e7d32; font-size:13px;">🎁 Бонус за друга</div>
+      <p style="font-size:11px; text-align:center; color:#555; margin-bottom:10px;">Пригласи друга и получи 5000 <span class="coin-icon"></span> и 50 🍬!</p>
+      <button class="btn" style="background:#a5d6a7; box-shadow:0 4px 0 #81c784; color:#1b5e20;" id="inviteBtn" onclick="inviteFriend()">Пригласить (Осталось: 5)</button>
+    </div>
+    <div class="card">
+      <div style="font-weight:bold; margin-bottom:10px; text-align:center; font-size:13px;">👤 Твое имя</div>
+      <input type="text" id="playerNameInput" class="name-input" placeholder="Введи имя..." maxlength="15">
+      <button class="btn btn-mint" style="margin-top:10px;" onclick="saveName()">Сохранить имя</button>
+    </div>
+    <div class="card">
+      <div style="font-weight:bold; margin-bottom:10px; text-align:center; font-size:13px;">🖼️ Цвет комнаты</div>
+      <div class="theme-circles">
+        <div class="theme-circle" style="background:#f8bbd0;" onclick="setRoomTheme('room-theme-pink', this)"></div>
+        <div class="theme-circle" style="background:#bbf7d0;" onclick="setRoomTheme('room-theme-mint', this)"></div>
+        <div class="theme-circle" style="background:#e9d5ff;" onclick="setRoomTheme('room-theme-lavender', this)"></div>
+        <div class="theme-circle" style="background:#34495e;" onclick="setRoomTheme('room-theme-dark', this)"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-weight:bold; margin-bottom:10px; text-align:center; font-size:13px;">🎨 Тема интерфейса</div>
+      <div class="theme-circles">
+        <div class="theme-circle" style="background:#f8bbd0;" onclick="setUiTheme('theme-pink', this)"></div>
+        <div class="theme-circle" style="background:#bbf7d0;" onclick="setUiTheme('theme-mint', this)"></div>
+        <div class="theme-circle" style="background:#e9d5ff;" onclick="setUiTheme('theme-lavender', this)"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabbar">
+    <button class="tab-btn active" onclick="switchTab('room', this)"><span class="icon">🏠</span>Логово</button>
+    <button class="tab-btn" onclick="switchTab('collection', this)"><span class="icon">📖</span>Коллекция</button>
+    <button class="tab-btn" onclick="switchTab('street', this)"><span class="icon">🔍</span>Улица</button>
+    <button class="tab-btn" onclick="switchTab('steal', this)"><span class="icon">🥷</span>Набеги</button>
+    <button class="tab-btn" onclick="switchTab('league', this)"><span class="icon">🏆</span>Лига</button>
+    <button class="tab-btn" onclick="switchTab('shop', this)"><span class="icon">🛒</span>Магазин</button>
+    <button class="tab-btn" onclick="switchTab('inventory', this)"><span class="icon">🎒</span>Склад</button>
+    <button class="tab-btn" onclick="switchTab('wardrobe', this)"><span class="icon">🎩</span>Шапки</button>
+    <button class="tab-btn" onclick="switchTab('profile', this)"><span class="icon">⚙️</span>Профиль</button>
+  </div>
+</div>
+
+<div id="foundPanel">
+  <div class="found-title">✨ Вы нашли:</div>
+  <div class="found-icon" id="foundIcon">🍬</div>
+  <div class="found-name" id="foundName">Конфеты</div>
+  <button class="btn" style="background:#ffca28; box-shadow:0 4px 0 #ffa000; color:#5d4037;" onclick="closeFoundPanel()">Забрать!</button>
+</div>
+
+<div class="modal-overlay" id="breedModal">
+  <div class="modal-box">
+    <h2 style="color:var(--text-dark); margin:0 0 10px 0;">✨ Скрещивание! ✨</h2>
+    <div class="modal-svg" id="modal-svg-container"></div>
+    <div style="font-size:18px; font-weight:900; color:var(--text-dark);" id="modal-name">Имя</div>
+    <div class="rarity-label" id="modal-rarity">Редкость</div>
+    <p style="font-size:11px; color:var(--text-light); margin:10px 0;">Родители исчезли, оставив потомка.</p>
+    <button class="btn" onclick="closeBreedModal()">Забрать в логово</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="expandModal">
+  <div class="modal-box" style="border-color: #4caf50;">
+    <div style="font-size: 50px; margin-bottom: 10px;">🏠</div>
+    <h2 style="color:#2e7d32; margin:0 0 10px 0;">Комната расширена!</h2>
+    <div style="font-size:16px; font-weight:900; color:var(--text-dark);" id="expand-level-text">Уровень дома: 2</div>
+    <p style="font-size:12px; color:var(--text-light); margin:15px 0;">Теперь в логове поместится больше монстриков!</p>
+    <button class="btn" style="background:#a5d6a7; box-shadow:0 4px 0 #81c784; color:#1b5e20;" onclick="document.getElementById('expandModal').classList.remove('active')">Ура!</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="levelUpModal">
+  <div class="modal-box" style="border-color: #ffca28;">
+    <div style="font-size: 40px; margin-bottom: 10px;">🎉</div>
+    <h2 style="color:#e65100; margin:0 0 10px 0;">Новый уровень!</h2>
+    <div style="font-size:20px; font-weight:900; color:var(--text-dark);" id="level-up-text">Уровень 2</div>
+    <p style="font-size:11px; color:var(--text-light); margin:15px 0;">Ты получаешь <b>+500 монет</b> и <b>+3 💎</b>!</p>
+    <button class="btn" style="background:#ffca28; box-shadow:0 4px 0 #ffa000; color:#5d4037;" onclick="document.getElementById('levelUpModal').classList.remove('active')">Ура!</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="infoModal">
+  <div class="modal-box">
+    <div class="info-title">
+      <span id="info-icon">ℹ️</span> <span id="info-title">Заголовок</span>
+    </div>
+    <div class="info-text" id="info-text">Текст описания...</div>
+    <button class="btn" style="background:#64b5f6; color:white; box-shadow:0 4px 0 #2196f3;" onclick="document.getElementById('infoModal').classList.remove('active')">Понятно</button>
+  </div>
+</div>
+
+<script>
+  // ==========================================
+  // БЕЗОПАСНАЯ ИНИЦИАЛИЗАЦИЯ VK BRIDGE
+  // ==========================================
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof vkBridge !== 'undefined') {
+      try { vkBridge.send('VKWebAppInit').catch(err => console.log('VK Bridge Error:', err)); } catch (e) {}
+    }
+  });
+
+  // ==========================================
+  // АУДИО
+  // ==========================================
+  let audioCtx = null;
+  let sfxGain = null;
+  let soundEnabled = true;
+
+  function initAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      sfxGain = audioCtx.createGain();
+      sfxGain.gain.value = 0.3;
+      sfxGain.connect(audioCtx.destination);
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function playSFX(type) {
+    if (!audioCtx || !soundEnabled) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(sfxGain);
+
+    if (type === 'click') {
+      osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+    }
+    else if (type === 'grass') {
+      osc.type = 'square'; osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+      osc.frequency.linearRampToValueAtTime(300, audioCtx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    }
+    else if (type === 'catch') {
+      osc.type = 'triangle'; osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1000, audioCtx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    } 
+    else if (type === 'feed') {
+      osc.type = 'sine'; osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    }
+    else if (type === 'levelup') {
+      [440, 554.37, 659.25, 880].forEach((freq, i) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.connect(g); g.connect(sfxGain);
+        o.type = 'sine'; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.1, audioCtx.currentTime + i*0.1);
+        g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i*0.1 + 0.3);
+        o.start(audioCtx.currentTime + i*0.1); o.stop(audioCtx.currentTime + i*0.1 + 0.3);
+      });
+    }
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!audioCtx) initAudio();
+    if (e.target.closest('.tab-btn')) return; 
+    if (e.target.closest('button') || e.target.closest('.shop-item') || e.target.closest('.ui-item')) {
+      playSFX('click');
+    }
+  });
+
+  function showInfo(title, text, icon) {
+    document.getElementById('info-title').innerText = title;
+    document.getElementById('info-text').innerText = text;
+    document.getElementById('info-icon').innerText = icon;
+    document.getElementById('infoModal').classList.add('active');
+  }
+
+  // ==========================================
+  // ОБМЕН КАМНЕЙ НА МОНЕТЫ
+  // ==========================================
+  function exchangeGems(coinAmount, gemPrice) {
+    if (state.gems < gemPrice) {
+      return showInfo('Не хватает камней', `Для обмена нужно ${gemPrice} 💎. У тебя только ${state.gems} 💎.`, '💎');
+    }
+    state.gems -= gemPrice;
+    state.coins += coinAmount;
+    updateUI(); saveGame();
+    playSFX('levelup');
+    showInfo('Обмен успешен!', `Ты обменял ${gemPrice} 💎 на ${coinAmount} 🪙 монет!`, '🔄');
+  }
+
+  // ==========================================
+  // РЕКЛАМА И ПРИГЛАШЕНИЯ
+  // ==========================================
+  function watchAd() {
+    if (state.energy >= state.maxEnergy) return showInfo('Энергия', 'У тебя уже полный запас энергии!', '⚡');
+
+    if (typeof vkBridge !== 'undefined') {
+      vkBridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' })
+        .then((data) => {
+          if (data.result) {
+            state.energy = Math.min(state.maxEnergy, state.energy + 50);
+            updateUI(); saveGame();
+            playSFX('levelup');
+            showInfo('Реклама', 'Спасибо за просмотр! Получено +50 ⚡ энергии.', '📺');
+          } else {
+            showInfo('Реклама', 'Реклама не была просмотрена до конца.', '📺');
+          }
+        })
+        .catch((error) => {
+          showInfo('Реклама', 'Не удалось загрузить рекламу. Попробуй позже.', '📺');
+        });
+    } else {
+      alert('📺 Имитация просмотра рекламы...\nПодожди 2 секунды.');
+      const btn = document.querySelector('button[onclick="watchAd()"]');
+      btn.innerText = '⏳'; btn.disabled = true;
+      setTimeout(() => {
+        state.energy = Math.min(state.maxEnergy, state.energy + 50);
+        updateUI(); saveGame();
+        playSFX('levelup');
+        alert('📺 Спасибо за просмотр! Получено +50 ⚡ энергии.');
+        btn.innerText = '📺'; btn.disabled = false;
+      }, 2000);
+    }
+  }
+
+  function inviteFriend() {
+    if (state.invitesLeft <= 0) return showInfo('Приглашения', 'Вы уже использовали все приглашения!', '🎁');
+
+    if (typeof vkBridge !== 'undefined') {
+      vkBridge.send('VKWebAppShowInviteBox', {})
+        .then((data) => {
+          if (data.success) {
+            state.invitesLeft--; state.coins += 5000; state.candies += 50;
+            document.getElementById('inviteBtn').innerHTML = `Пригласить (Осталось: ${state.invitesLeft})`;
+            if (state.invitesLeft === 0) document.getElementById('inviteBtn').classList.add('btn-disabled');
+            updateUI(); saveGame();
+            playSFX('levelup');
+            showInfo('Приглашения', 'Приглашения отправлены! Вы получили 5000 монет и 50 конфет!', '🎉');
+          } else {
+            showInfo('Приглашения', 'Приглашения не были отправлены.', '🎁');
+          }
+        })
+        .catch((error) => {
+          showInfo('Приглашения', 'Не удалось открыть окно приглашений. Попробуйте позже.', '🎁');
+        });
+    } else {
+      alert('🎁 Имитация приглашения друга...');
+      state.invitesLeft--; state.coins += 5000; state.candies += 50;
+      document.getElementById('inviteBtn').innerHTML = `Пригласить (Осталось: ${state.invitesLeft})`;
+      if (state.invitesLeft === 0) document.getElementById('inviteBtn').classList.add('btn-disabled');
+      updateUI(); saveGame();
+      playSFX('levelup');
+      alert('🎉 Друг присоединился! Ты получил 5000 монет и 50 конфет!');
+    }
+  }
+
+  // ==========================================
+  // ЛИГА
+  // ==========================================
+  let leagueState = {
+    points: 0,
+    bots: [ { name: 'ДворовыйКот', score: 120 }, { name: 'Мурзик', score: 80 }, { name: 'Барсик', score: 200 }, { name: 'Пушок', score: 50 } ]
+  };
+
+  function updateTournamentUI() {
+    const now = new Date();
+    const day = now.getDay() || 7;
+    const end = new Date(now);
+    end.setDate(now.getDate() + (7 - day));
+    end.setHours(23, 59, 59, 999);
+    let diff = end - now;
+    if (diff < 0) diff = 0;
+
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    document.getElementById('league-timer').innerText = `${d}д ${h}ч ${m}м ${s}с`;
+    document.getElementById('league-my-points').innerText = leagueState.points;
+
+    let all = [...leagueState.bots, { name: state.playerName, score: leagueState.points }];
+    all.sort((a, b) => b.score - a.score);
+    
+    const cont = document.getElementById('leaderboard-container');
+    cont.innerHTML = '';
+    all.forEach((p, i) => {
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  ';
+      cont.innerHTML += `<div class="leaderboard-row ${p.name === state.playerName ? 'me' : ''}">
+        <span>${medal} ${p.name}</span><span>${p.score} очк.</span>
+      </div>`;
+    });
+  }
+  setInterval(updateTournamentUI, 1000);
+
+  // ==========================================
+  // SVG ШАПКА-ПРОПЕЛЛЕР
+  // ==========================================
+  const propellerHatSVG = `
+    <svg viewBox="0 0 100 100" style="width: 30px; height: 30px;">
+      <path d="M 10 60 Q 50 10 90 60 Z" fill="#f44336"/>
+      <path d="M 10 60 Q 30 10 50 10 L 20 60 Z" fill="#ffeb3b"/>
+      <path d="M 90 60 Q 70 10 50 10 L 80 60 Z" fill="#4caf50"/>
+      <path d="M 15 60 L 85 60 L 100 75 L 0 75 Z" fill="#2196f3"/>
+      <circle cx="50" cy="12" r="4" fill="#f44336" stroke="#fff" stroke-width="1"/>
+      <circle cx="50" cy="6" r="4" fill="#ffeb3b" stroke="#fff" stroke-width="1"/>
+      <circle cx="50" cy="0" r="4" fill="#2196f3" stroke="#fff" stroke-width="1"/>
+      <path d="M 20 -5 Q 50 5 80 -5 Q 50 -15 20 -5 Z" fill="#4caf50" stroke="#fff" stroke-width="1"/>
+      <path d="M 20 -5 Q 50 5 80 -5 Q 50 -15 20 -5 Z" fill="#2196f3" opacity="0.7" transform="rotate(15 50 -5)"/>
+    </svg>
+  `;
+
+  // ==========================================
+  // БАЗА ДАННЫХ
+  // ==========================================
+  const COLORS = ['#ffb6c1', '#b2dfdb', '#d1c4e9', '#ffe082', '#b3e5fc', '#ffccbc', '#f48fb1', '#c8e6c9', '#e1bee7', '#ffab91'];
+  const NAMES = ['Пушин', 'Слизик', 'Зефирка', 'Капелька', 'Мякиш', 'Булочка', 'Пломбир', 'Мармелад', 'Ириска', 'Карамель', 'Тофу', 'Желешка', 'Кекс', 'Пастила', 'Пряник', 'Сахарок', 'Медовик', 'Крем', 'Пудинг', 'Мусс'];
+  
+  const HATS = [
+    { id: 'ushanka', n: 'Шапка', icon: '🧢', price: 500, desc: '+1% к доходу' },
+    { id: 'bow', n: 'Бантик', icon: '🎀', price: 800, desc: '+1% к доходу' },
+    { id: 'tophat', n: 'Цилиндр', icon: '🎩', price: 1500, desc: '+2% к доходу' },
+    { id: 'crown', n: 'Корона', icon: '👑', price: 3000, desc: '+3% к доходу' },
+    { id: 'propeller', n: 'Шапка-пропеллер', icon: 'svg', price: 5000, desc: '+4% к доходу' }
+  ];
+
+  const INTERIOR = [
+    { id: 'rug_pink', n: 'Ковер (Розовый)', icon: '🟪', price: 1000, desc: 'Замедляет голод', css: 'rug-pink' },
+    { id: 'rug_mint', n: 'Ковер (Мятный)', icon: '🟩', price: 1000, desc: 'Замедляет голод', css: 'rug-mint' },
+    { id: 'rug_lav', n: 'Ковер (Лаванда)', icon: '🟪', price: 1000, desc: 'Замедляет голод', css: 'rug-lav' },
+    { id: 'lamp', n: 'Светильник', icon: '💡', price: 5000, desc: '+1% к доходу', css: 'decor-lamp' },
+    { id: 'plant', n: 'Растение', icon: '🪴', price: 8000, desc: '+2% к доходу', css: 'decor-plant' }
+  ];
+
+  const RARITY_NAMES = ['', 'Обычный', 'Редкий', 'Эпический', 'Легендарный'];
+  const RARITY_COLORS = ['', '#9ccc65', '#29b6f6', '#ab47bc', '#ffa000'];
+
+  const MONSTER_DB = [];
+  for (let i = 0; i < 100; i++) {
+    MONSTER_DB.push({
+      id: i, n: NAMES[i % NAMES.length] + (i >= 20 ? ' ' + (Math.floor(i/20)+1) : ''),
+      c: COLORS[i % COLORS.length], h: Math.random() > 0.5,
+      e: Math.random() > 0.7 ? (Math.random() > 0.5 ? 3 : 1) : 2,
+      t: Math.floor(i / 25) + 1
+    });
+  }
+
+  // ==========================================
+  // СОСТОЯНИЕ И СОХРАНЕНИЯ
+  // ==========================================
+  let state = { 
+    coins: 15000, gems: 5, candies: 50, level: 1, xp: 0, xpNext: 100,
+    playerName: 'Игрок',
+    energy: 100, maxEnergy: 100,
+    inventoryHats: [], 
+    inventoryInterior: [], 
+    placedInterior: [],    
+    decorPositions: {},
+    roomLevel: 1,
+    invitesLeft: 5,
+    discoveredMonsters: [0, 1]
+  };
+  
+  let pets = []; 
+  let MAX_PETS = 3;
+
+  const SAVE_KEY = 'monster_game_save_v2';
+
+  function saveGame() {
+    try {
+      const saveData = {
+        state: { ...state },
+        pets: pets.map(p => ({
+          id: p.id, data: p.data, hunger: p.hunger, energy: p.energy, hat: p.hat, x: p.x, y: p.y
+        }))
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+    } catch (e) {
+      console.error('Ошибка сохранения:', e);
+    }
+  }
+
+  function loadGame() {
+    const saved = localStorage.getItem(SAVE_KEY);
+    
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.state) Object.assign(state, parsed.state);
+        
+        if (parsed.pets && Array.isArray(parsed.pets)) {
+          pets = parsed.pets.map(sp => ({
+            id: sp.id, data: sp.data, hunger: sp.hunger, energy: sp.energy,
+            hat: sp.hat, x: sp.x, y: sp.y, isDragging: false, alive: true
+          }));
+        }
+      } catch (e) { console.error('Ошибка загрузки:', e); }
+    }
+    
+    if (pets.length === 0) {
+      pets.push({ id: 1, data: MONSTER_DB[0], hunger: 100, energy: 100, alive: true, x: 40, y: 25, hat: null, isDragging: false });
+      pets.push({ id: 2, data: MONSTER_DB[1], hunger: 100, energy: 100, alive: true, x: 60, y: 35, hat: null, isDragging: false });
+      unlockMonsterInCollection(0);
+      unlockMonsterInCollection(1);
+    }
+    
+    document.getElementById('playerNameInput').value = state.playerName;
+    updateMaxPets();
+    updateUI();
+    renderLair();
+    renderShops();
+    renderDecor();
+    renderCollectionUI();
+  }
+
+  setInterval(saveGame, 15000);
+  window.addEventListener('beforeunload', saveGame);
+
+  // ==========================================
+  // ЛОГИКА ИГРЫ
+  // ==========================================
+  function unlockMonsterInCollection(id) {
+    if (!state.discoveredMonsters.includes(id)) {
+      state.discoveredMonsters.push(id);
+      renderCollectionUI();
+    }
+  }
+
+  function renderCollectionUI() {
+    const grid = document.getElementById('collection-grid');
+    grid.innerHTML = '';
+    document.getElementById('collection-progress').innerText = `Открыто: ${state.discoveredMonsters.length} / ${MONSTER_DB.length}`;
+
+    MONSTER_DB.forEach(monster => {
+      const isUnlocked = state.discoveredMonsters.includes(monster.id);
+      const el = document.createElement('div');
+      el.className = `col-item ${isUnlocked ? '' : 'locked'}`;
+      el.innerHTML = `
+        <div class="col-svg">${getMonsterSVG(monster.c, monster.h, monster.e, false)}</div>
+        <div class="col-name">${isUnlocked ? monster.n : '???'}</div>
+        ${isUnlocked ? '' : '<div class="question-mark">?</div>'}
+      `;
+      grid.appendChild(el);
+    });
+  }
+
+  function updateMaxPets() {
+    if (state.roomLevel === 1) MAX_PETS = 3;
+    else if (state.roomLevel === 2) MAX_PETS = 6;
+    else if (state.roomLevel === 3) MAX_PETS = 9;
+    else MAX_PETS = 12;
+    const el = document.getElementById('ui-pets');
+    if (el) el.innerText = `${pets.length}/${MAX_PETS}`;
+  }
+
+  function saveName() {
+    const val = document.getElementById('playerNameInput').value.trim();
+    if (val.length > 0) {
+      state.playerName = val;
+      saveGame();
+      alert('Имя сохранено!');
+      updateTournamentUI();
+    }
+  }
+
+  function getMonsterSVG(color, hasHorns, eyes, isSad = false) {
+    const eyeColor = '#333';
+    let eyesHtml = isSad 
+      ? `<path d="M 28 50 Q 35 45 42 50" fill="none" stroke="${eyeColor}" stroke-width="3" stroke-linecap="round"/>`
+      : (eyes === 1 ? `<circle cx="50" cy="50" r="12" fill="white"/><circle cx="50" cy="50" r="7" fill="${eyeColor}"/>`
+         : eyes === 2 ? `<circle cx="35" cy="50" r="9" fill="white"/><circle cx="35" cy="50" r="5" fill="${eyeColor}"/><circle cx="65" cy="50" r="9" fill="white"/><circle cx="65" cy="50" r="5" fill="${eyeColor}"/>`
+         : `<circle cx="25" cy="50" r="7" fill="white"/><circle cx="50" cy="45" r="8" fill="white"/><circle cx="75" cy="50" r="7" fill="white"/>`);
+    let hornsHtml = hasHorns ? `<path d="M 25 25 Q 15 0 35 15 Z" fill="${color}"/><path d="M 75 25 Q 85 0 65 15 Z" fill="${color}"/>` : '';
+    let cheeksHtml = isSad ? `<path d="M 45 65 Q 50 60 55 65" fill="none" stroke="${eyeColor}" stroke-width="2"/>` : `<ellipse cx="22" cy="62" rx="6" ry="3" fill="#ff8a80"/><ellipse cx="78" cy="62" rx="6" ry="3" fill="#ff8a80"/>`;
+    return `<svg viewBox="0 0 100 100" class="monster-svg"><path d="M50 15 C 85 15, 98 35, 98 60 C 98 90, 70 95, 50 95 C 30 95, 2 90, 2 60 C 2 35, 15 15, 50 15 Z" fill="${color}" />${hornsHtml}${eyesHtml}${cheeksHtml}</svg>`;
+  }
+
+  function updateUI() {
+    document.getElementById('ui-coins').innerText = state.coins;
+    document.getElementById('ui-gems').innerText = state.gems;
+    document.getElementById('ui-candies').innerText = state.candies;
+    document.getElementById('ui-level').innerText = state.level;
+    document.getElementById('xp-bar').style.width = (state.xp / state.xpNext * 100) + '%';
+    document.getElementById('ui-energy-bar').style.width = (state.energy / state.maxEnergy * 100) + '%';
+    updateExpandBtn();
+    updateMaxPets();
+  }
+
+  function addXP(amount) {
+    state.xp += amount;
+    leagueState.points += Math.floor(amount / 2);
+    if (state.xp >= state.xpNext) {
+      state.xp -= state.xpNext;
+      state.level++;
+      state.xpNext = Math.floor(state.xpNext * 1.5);
+      state.coins += 500; state.gems += 3;
+      playSFX('levelup');
+      document.getElementById('level-up-text').innerText = `Уровень ${state.level}!`;
+      document.getElementById('levelUpModal').classList.add('active');
+    }
+    saveGame();
+    updateUI();
+  }
+
+  function switchTab(id, btn) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + id).classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if(id === 'wardrobe') renderWardrobeSlots();
+    if(id === 'shop') renderShops();
+    if(id === 'inventory') renderInventory();
+    if(id === 'league') updateTournamentUI();
+    if(id === 'collection') renderCollectionUI();
+  }
+
+  function setUiTheme(themeClass, el) {
+    document.body.className = themeClass;
+    document.querySelectorAll('.theme-circle').forEach(c => c.style.border = '3px solid transparent');
+    el.style.border = '3px solid var(--text-dark)';
+    saveGame();
+  }
+
+  function setRoomTheme(themeClass, el) {
+    document.getElementById('room').className = 'room-wrapper ' + themeClass;
+    document.querySelectorAll('.theme-circle').forEach(c => c.style.border = '3px solid transparent');
+    el.style.border = '3px solid var(--text-dark)';
+    saveGame();
+  }
+
+  function updateExpandBtn() {
+    const btn = document.getElementById('expandBtn');
+    if (state.roomLevel >= 4) { btn.innerText = 'Максимальный размер'; btn.style.opacity = '0.5'; btn.disabled = true; return; }
+    const cost = state.roomLevel * 5000;
+    btn.innerHTML = `Расширить (${cost} <span class="coin-icon" style="width:10px;height:10px;"></span>)`;
+    const room = document.getElementById('room');
+    if (state.roomLevel === 1) room.style.height = '340px';
+    if (state.roomLevel === 2) room.style.height = '420px';
+    if (state.roomLevel === 3) room.style.height = '500px';
+    if (state.roomLevel >= 4) room.style.height = '580px';
+  }
+
+  function expandRoom() {
+    if (state.roomLevel >= 4) return;
+    const cost = state.roomLevel * 5000;
+    if (state.coins < cost) return alert('Не хватает монет для расширения!');
+    state.coins -= cost;
+    state.roomLevel++;
+    saveGame();
+    updateUI();
+    playSFX('levelup');
+    document.getElementById('expand-level-text').innerText = `Уровень дома: ${state.roomLevel}`;
+    document.getElementById('expandModal').classList.add('active');
+  }
+
+  function renderShops() {
+    const iShop = document.getElementById('interior-shop');
+    iShop.innerHTML = '';
+    INTERIOR.forEach(item => {
+      const owned = state.inventoryInterior.includes(item.id);
+      iShop.innerHTML += `
+        <div class="shop-item" onclick="buyInterior('${item.id}')" style="${owned ? 'opacity:0.6;' : ''}">
+          <div class="icon">${item.icon}</div><div class="title">${item.n}</div>
+          <div class="price">${owned ? 'Куплено' : item.price + ' <span class="coin-icon" style="width:10px;height:10px;"></span>'}</div>
+          <div class="bonus">${item.desc}</div>
+        </div>`;
+    });
+
+    const hShop = document.getElementById('hat-shop');
+    hShop.innerHTML = '';
+    HATS.forEach(item => {
+      const owned = state.inventoryHats.includes(item.id);
+      const iconHtml = item.icon === 'svg' ? propellerHatSVG : item.icon;
+      hShop.innerHTML += `
+        <div class="shop-item" onclick="buyHat('${item.id}')" style="${owned ? 'opacity:0.6;' : ''}">
+          <div class="icon">${iconHtml}</div><div class="title">${item.n}</div>
+          <div class="price">${owned ? 'Куплено' : item.price + ' <span class="coin-icon" style="width:10px;height:10px;"></span>'}</div>
+          <div class="bonus">${item.desc}</div>
+        </div>`;
+    });
+  }
+
+  function buyInterior(id) {
+    const item = INTERIOR.find(i => i.id === id);
+    if (state.inventoryInterior.includes(id)) return;
+    if (state.coins < item.price) return alert('Не хватает монет!');
+    state.coins -= item.price;
+    state.inventoryInterior.push(id);
+    saveGame();
+    updateUI();
+    renderShops();
+  }
+
+  function buyHat(id) {
+    const item = HATS.find(i => i.id === id);
+    if (state.inventoryHats.includes(id)) return;
+    if (state.coins < item.price) return alert('Не хватает монет!');
+    state.coins -= item.price;
+    state.inventoryHats.push(id);
+    saveGame();
+    updateUI();
+    renderShops();
+  }
+
+  function renderInventory() {
+    const container = document.getElementById('inventory-shop');
+    container.innerHTML = '';
+    if (state.inventoryInterior.length === 0) {
+      container.innerHTML = '<div style="grid-column: span 2; text-align:center; color:#aaa; padding:20px;">Склад пуст. Купи мебель в магазине!</div>';
+      return;
+    }
+    state.inventoryInterior.forEach(id => {
+      const item = INTERIOR.find(i => i.id === id);
+      const isPlaced = state.placedInterior.includes(id);
+      container.innerHTML += `
+        <div class="shop-item" style="border-color:${isPlaced ? '#66bb6a' : '#eee'};">
+          <div class="icon">${item.icon}</div><div class="title">${item.n}</div>
+          <button class="btn ${isPlaced ? 'btn-mint' : ''}" style="padding:6px; font-size:11px; margin-top:5px;" onclick="togglePlacement('${item.id}')">${isPlaced ? 'Убрать' : 'Поставить'}</button>
+        </div>`;
+    });
+  }
+
+  function togglePlacement(id) {
+    const index = state.placedInterior.indexOf(id);
+    if (index > -1) state.placedInterior.splice(index, 1);
+    else {
+      state.placedInterior.push(id);
+      if (id.includes('rug')) state.placedInterior = state.placedInterior.filter(pId => !pId.includes('rug') || pId === id);
+    }
+    saveGame();
+    renderDecor();
+    renderInventory();
+  }
+
+  function renderDecor() {
+    const c = document.getElementById('decor-container');
+    c.innerHTML = '';
+    state.placedInterior.forEach(id => {
+      const item = INTERIOR.find(i => i.id === id);
+      const el = document.createElement('div');
+      if (id.includes('rug')) el.className = `decor-item decor-rug ${item.css}`;
+      else {
+        el.className = `decor-item ${item.css}`;
+        if (id === 'lamp') el.innerText = '💡';
+        if (id === 'plant') el.innerText = '🪴';
+      }
+      if (state.decorPositions[id]) {
+        el.style.left = state.decorPositions[id].x + '%';
+        el.style.bottom = state.decorPositions[id].y + '%';
+      } else {
+        if (id.includes('rug')) { el.style.left = '20%'; el.style.bottom = '5%'; }
+        if (id === 'lamp') { el.style.left = '75%'; el.style.bottom = '60%'; }
+        if (id === 'plant') { el.style.left = '80%'; el.style.bottom = '15%'; }
+      }
+      let isDragging = false, startX, startY, startLeft, startBottom;
+      el.addEventListener('pointerdown', (e) => {
+        isDragging = true; el.setPointerCapture(e.pointerId);
+        startX = e.clientX; startY = e.clientY;
+        startLeft = parseFloat(el.style.left || 0); startBottom = parseFloat(el.style.bottom || 0);
+        el.style.zIndex = 100;
+      });
+      el.addEventListener('pointermove', (e) => {
+        if (!isDragging) return;
+        const room = document.getElementById('room'), rect = room.getBoundingClientRect();
+        el.style.left = Math.max(0, Math.min(90, startLeft + ((e.clientX - startX) / rect.width) * 100)) + '%';
+        el.style.bottom = Math.max(0, Math.min(85, startBottom - ((e.clientY - startY) / rect.height) * 100)) + '%';
+      });
+      el.addEventListener('pointerup', () => {
+        isDragging = false; el.style.zIndex = 3;
+        state.decorPositions[id] = { x: parseFloat(el.style.left), y: parseFloat(el.style.bottom) };
+        saveGame();
+      });
+      c.appendChild(el);
+    });
+  }
+
+  let wardrobeTargetPetId = null;
+  function renderWardrobeSlots() {
+    const container = document.getElementById('wardrobe-slots');
+    container.innerHTML = '';
+    pets.forEach(p => {
+      const slot = document.createElement('div');
+      slot.className = 'mon-slot' + (wardrobeTargetPetId === p.id ? ' selected' : '');
+      const previewSvg = getMonsterSVG(p.data.c, p.data.h, p.data.e);
+      let previewHat = '';
+      if (p.hat) {
+        const hat = HATS.find(c => c.id === p.hat);
+        previewHat = `<div class="hat">${hat.icon === 'svg' ? propellerHatSVG : hat.icon}</div>`;
+      }
+      slot.innerHTML = `<div class="svg-container">${previewSvg}${previewHat}</div><div class="name">${p.data.n}</div>`;
+      slot.onclick = () => { wardrobeTargetPetId = p.id; renderWardrobeSlots(); };
+      container.appendChild(slot);
+    });
+    if (wardrobeTargetPetId) {
+      const pet = pets.find(p => p.id === wardrobeTargetPetId);
+      const cDiv = document.createElement('div');
+      cDiv.style.cssText = "width:100%; margin-top:20px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center;";
+      cDiv.innerHTML = '<div style="width:100%; text-align:center; font-weight:bold; margin-bottom:10px;">Выбери шапку:</div>';
+      if(state.inventoryHats.length === 0) cDiv.innerHTML += '<div style="font-size:12px; color:#aaa;">Купи шапки в магазине</div>';
+      state.inventoryHats.forEach(hid => {
+        const hat = HATS.find(c => c.id === hid);
+        const btn = document.createElement('div');
+        btn.className = 'shop-item'; btn.style.width = '80px';
+        btn.innerHTML = `<div class="icon">${hat.icon === 'svg' ? propellerHatSVG : hat.icon}</div><div class="title">${hat.n}</div>`;
+        btn.onclick = () => { pet.hat = hid; saveGame(); renderWardrobeSlots(); renderLair(); };
+        cDiv.appendChild(btn);
+      });
+      if (pet.hat) {
+         const rmBtn = document.createElement('button');
+         rmBtn.className = 'btn btn-mint'; rmBtn.style.marginTop = '10px'; rmBtn.innerText = 'Снять шапку';
+         rmBtn.onclick = () => { pet.hat = null; saveGame(); renderWardrobeSlots(); renderLair(); };
+         cDiv.appendChild(rmBtn);
+      }
+      container.appendChild(cDiv);
+    }
+  }
+
+  function showFoundPanel(iconOrSvg, name) {
+    const container = document.getElementById('foundIcon');
+    if (iconOrSvg.startsWith('<svg')) container.innerHTML = `<div style="width: 60px; height: 60px;">${iconOrSvg}</div>`;
+    else { container.innerHTML = iconOrSvg; container.style.fontSize = '60px'; }
+    document.getElementById('foundName').innerText = name;
+    document.getElementById('foundPanel').classList.add('active');
+  }
+  function closeFoundPanel() { document.getElementById('foundPanel').classList.remove('active'); }
+
+  let isSearching = false;
+  function searchMonster() {
+    if (isSearching) return;
+    if (pets.length >= MAX_PETS) return alert(`Логово заполнено! Максимум: ${MAX_PETS}`);
+    if (state.energy < 15) return alert('Не хватает энергии! Посмотри рекламу 📺.');
+    
+    isSearching = true; state.energy -= 15; updateUI(); saveGame();
+    const btn = document.getElementById('searchBtn');
+    btn.disabled = true; btn.innerText = '⏳ Ищем...';
+    document.getElementById('street').querySelectorAll('.street-monster').forEach(e => e.remove());
+
+    setTimeout(() => {
+      if (Math.random() < 0.3) {
+        const wildEl = document.createElement('div');
+        wildEl.className = 'street-monster';
+        wildEl.innerHTML = `<div style="font-size: 35px; text-align: center; line-height: 45px;">🍬</div>`;
+        wildEl.style.left = (20 + Math.random() * 200) + 'px';
+        wildEl.style.bottom = (30 + Math.random() * 100) + 'px';
+        
+        wildEl.addEventListener('pointerdown', (e) => {
+          e.preventDefault(); e.stopPropagation();
+          playSFX('catch'); wildEl.remove();
+          const amt = Math.floor(Math.random() * 20) + 10;
+          state.candies += amt; updateUI(); saveGame();
+          showFoundPanel('🍬', `Конфеты (x${amt})`);
+        });
+        document.getElementById('street').appendChild(wildEl);
+      } else {
+        const wildMonster = MONSTER_DB[Math.floor(Math.random() * MONSTER_DB.length)];
+        const wildEl = document.createElement('div');
+        wildEl.className = 'street-monster';
+        wildEl.innerHTML = getMonsterSVG(wildMonster.c, wildMonster.h, wildMonster.e);
+        wildEl.style.left = (20 + Math.random() * 200) + 'px';
+        wildEl.style.bottom = (30 + Math.random() * 100) + 'px';
+        
+        wildEl.addEventListener('pointerdown', (e) => {
+          e.preventDefault(); e.stopPropagation();
+          playSFX('catch'); wildEl.remove();
+          pets.push({ id: Date.now() + Math.random(), data: wildMonster, hunger: 100, energy: 100, alive: true, x: 10 + Math.random() * 60, y: 15 + Math.random() * 35, hat: null, isDragging: false });
+          unlockMonsterInCollection(wildMonster.id); addXP(15); saveGame();
+          renderLair(); showFoundPanel(getMonsterSVG(wildMonster.c, wildMonster.h, wildMonster.e), wildMonster.n);
+        });
+        document.getElementById('street').appendChild(wildEl);
+      }
+      btn.disabled = false; btn.innerText = '🔍 Искать (15 ⚡)'; isSearching = false;
+    }, 1000);
+  }
+
+  function trySteal() {
+    if (state.energy < 20) return alert('Не хватает энергии!');
+    state.energy -= 20; saveGame();
+    const log = document.getElementById('steal-log'); const div = document.createElement('div');
+    if (Math.random() < 0.7) {
+      const amount = Math.floor(Math.random()*10) + 5;
+      state.candies += amount; div.className = 'log-success'; div.innerText = `> ✅ Украдено ${amount} конфет.`;
+    } else {
+      state.candies = Math.max(0, state.candies - 5); div.className = 'log-fail'; div.innerText = `> ❌ Провал! Отобрали 5 конфет.`;
+    }
+    log.prepend(div); if (log.children.length > 10) log.lastChild.remove();
+    updateUI(); saveGame();
+  }
+
+  function tryAttack() {
+    if (state.energy < 30) return alert('Не хватает энергии!');
+    state.energy -= 30; saveGame();
+    const log = document.getElementById('steal-log'); const div = document.createElement('div');
+    if (Math.random() < 0.6) {
+      state.gems += 1; state.coins += 50; div.className = 'log-success'; div.innerText = `> 💥 Победа! Получено 1 💎 и 50 🪙.`;
+    } else {
+      div.className = 'log-fail'; div.innerText = `> ❌ Атака провалилась.`;
+    }
+    log.prepend(div); if (log.children.length > 10) log.lastChild.remove();
+    updateUI(); saveGame();
+  }
+
+  function scheduleWander(pet) {
+    if (pet.isDragging || !pet.el) return;
+    clearTimeout(pet.wanderTimeout);
+    pet.wanderTimeout = setTimeout(() => {
+      if (!pet.isDragging && pet.energy > 0 && pet.hunger > 0 && document.body.contains(pet.el)) {
+        const dx = (Math.random() - 0.5) * 20, dy = (Math.random() - 0.5) * 10;
+        let newX = Math.max(5, Math.min(85, pet.x + dx)), newY = Math.max(5, Math.min(45, pet.y + dy));
+        if (Math.abs(dx) > 2) {
+          const scaleX = dx < 0 ? -1 : 1;
+          pet.el.style.transform = `scaleX(${scaleX})`;
+          const hatEl = pet.el.querySelector('.hat');
+          if (hatEl) hatEl.style.transform = `translateX(-50%) scaleX(${scaleX})`;
+        }
+        pet.x = newX; pet.y = newY;
+        pet.el.style.transition = 'left 1.5s ease-in-out, bottom 1.5s ease-in-out, transform 0.3s';
+        pet.el.style.left = pet.x + '%'; pet.el.style.bottom = pet.y + '%';
+        setTimeout(() => { if (pet.el && !pet.isDragging) pet.el.style.transition = 'transform 0.2s'; }, 1500);
+      }
+      scheduleWander(pet);
+    }, 5000 + Math.random() * 10000);
+  }
+
+  function renderLair() {
+    const container = document.getElementById('pets-container');
+    container.innerHTML = '';
+    pets.forEach((pet) => {
+      clearTimeout(pet.wanderTimeout);
+      const petEl = document.createElement('div');
+      petEl.className = 'monster-container';
+      petEl.style.transition = 'transform 0.2s';
+      const isSad = (pet.hunger < 30 || pet.energy < 30);
+      petEl.innerHTML = getMonsterSVG(pet.data.c, pet.data.h, pet.data.e, isSad);
+      
+      if (pet.hat) {
+        const hat = HATS.find(c => c.id === pet.hat);
+        if (hat) petEl.innerHTML += `<div class="hat">${hat.icon === 'svg' ? propellerHatSVG : hat.icon}</div>`;
+      }
+
+      const tip = document.createElement('div');
+      tip.className = 'tooltip';
+      tip.innerHTML = `<div style="margin-bottom:2px; font-size: 12px;">${pet.data.n}</div><div class="tt-stats">🍬 ${Math.floor(pet.hunger)}% | ⚡ ${Math.floor(pet.energy)}%</div>`;
+      petEl.appendChild(tip);
+
+      petEl.style.left = pet.x + '%'; petEl.style.bottom = pet.y + '%';
+      let isDraggingLocal = false, startX, startY, startLeft, startBottom;
+
+      petEl.addEventListener('pointerdown', (e) => {
+        isDraggingLocal = true; pet.isDragging = true; clearTimeout(pet.wanderTimeout);
+        petEl.setPointerCapture(e.pointerId);
+        startX = e.clientX; startY = e.clientY;
+        startLeft = parseFloat(petEl.style.left); startBottom = parseFloat(petEl.style.bottom);
+        petEl.style.transition = 'none'; petEl.style.zIndex = 100;
+      });
+
+      petEl.addEventListener('pointermove', (e) => {
+        if (!isDraggingLocal) return;
+        const dx = e.clientX - startX, dy = e.clientY - startY;
+        if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return; 
+        const room = document.getElementById('room'), rect = room.getBoundingClientRect();
+        petEl.style.left = Math.max(0, Math.min(90, startLeft + (dx / rect.width) * 100)) + '%';
+        petEl.style.bottom = Math.max(0, Math.min(45, startBottom - (dy / rect.height) * 100)) + '%';
+      });
+
+      petEl.addEventListener('pointerup', (e) => {
+        if (!isDraggingLocal) return;
+        isDraggingLocal = false; pet.isDragging = false;
+        petEl.style.zIndex = 5; petEl.style.transition = 'transform 0.2s';
+        
+        if (petEl.hasPointerCapture(e.pointerId)) petEl.releasePointerCapture(e.pointerId);
+
+        let newX = parseFloat(petEl.style.left);
+        let newY = parseFloat(petEl.style.bottom);
+        if (!isNaN(newX)) pet.x = newX;
+        if (!isNaN(newY)) pet.y = newY;
+        
+        saveGame(); 
+
+        const distance = Math.hypot(e.clientX - startX, e.clientY - startY);
+        if (distance < 20) { 
+          if (pet.hunger < 100 || pet.energy < 100) {
+            if (state.candies >= 5) {
+              state.candies -= 5;
+              pet.hunger = Math.min(100, pet.hunger + 30);
+              pet.energy = Math.min(100, pet.energy + 30); 
+              addXP(5); updateUI(); saveGame();
+              const floatText = document.createElement('div');
+              floatText.className = 'float-text'; floatText.innerText = '+30';
+              floatText.style.left = petEl.style.left;
+              floatText.style.bottom = (parseFloat(petEl.style.bottom) + 10) + '%';
+              document.getElementById('room').appendChild(floatText);
+              setTimeout(() => floatText.remove(), 1000);
+              renderLair();
+            } else { alert('Нет конфет!'); }
+          }
+        } else {
+          checkBreedingDrop(pet);
+        }
+        if (pets.includes(pet)) scheduleWander(pet);
+      });
+      container.appendChild(petEl); pet.el = petEl;
+      scheduleWander(pet);
+    });
+  }
+
+  function checkBreedingDrop(draggedPet) {
+    if (state.candies < 20) return alert('Для скрещивания нужно 20 🍬!');
+    const targetPet = pets.find(p => p.id !== draggedPet.id && Math.hypot(p.x - draggedPet.x, p.y - draggedPet.y) < 15);
+    if (targetPet) {
+      clearTimeout(draggedPet.wanderTimeout); clearTimeout(targetPet.wanderTimeout);
+      state.candies -= 20; updateUI(); saveGame();
+      pets = pets.filter(p => p.id !== draggedPet.id && p.id !== targetPet.id);
+      
+      let pool = MONSTER_DB.filter(m => m.t === 3 || m.t === 4); 
+      let newData = pool[Math.floor(Math.random() * pool.length)]; 
+      pets.push({ id: Date.now() + Math.random(), data: newData, hunger: 100, energy: 100, alive: true, x: draggedPet.x, y: draggedPet.y, hat: null, isDragging: false });
+      
+      unlockMonsterInCollection(newData.id); addXP(50); saveGame();
+      renderLair();
+      
+      document.getElementById('modal-svg-container').innerHTML = getMonsterSVG(newData.c, newData.h, newData.e);
+      document.getElementById('modal-name').innerText = newData.n;
+      const rarityEl = document.getElementById('modal-rarity');
+      rarityEl.innerText = RARITY_NAMES[newData.t];
+      rarityEl.style.background = RARITY_COLORS[newData.t];
+      document.getElementById('breedModal').classList.add('active');
+    }
+  }
+
+  function closeBreedModal() { document.getElementById('breedModal').classList.remove('active'); }
+
+  let energyCountdown = 5;
+  setInterval(() => {
+    if (state.energy < state.maxEnergy) {
+      energyCountdown--;
+      if (energyCountdown <= 0) { state.energy = Math.min(state.maxEnergy, state.energy + 1); energyCountdown = 5; updateUI(); }
+      else updateUI();
+    } else energyCountdown = 5;
+  }, 1000);
+
+  setInterval(() => {
+    let totalIncome = 0;
+    if (state.placedInterior.includes('lamp')) totalIncome += 1;
+    if (state.placedInterior.includes('plant')) totalIncome += 2;
+    pets.forEach(pet => {
+      if (pet.hat === 'ushanka') totalIncome += 1;
+      if (pet.hat === 'bow') totalIncome += 1;
+      if (pet.hat === 'tophat') totalIncome += 2;
+      if (pet.hat === 'crown') totalIncome += 3;
+      if (pet.hat === 'propeller') totalIncome += 4;
+      let hungerDrop = state.placedInterior.some(id => id.includes('rug')) ? 1 : 2;
+      pet.hunger = Math.max(0, pet.hunger - hungerDrop);
+      let energyDrop = (pet.hunger < 30) ? 4 : 2; 
+      pet.energy = Math.max(0, pet.energy - energyDrop);
+      if (pet.hunger <= 0) clearTimeout(pet.wanderTimeout);
+    });
+    if (totalIncome > 0) { state.coins += totalIncome; updateUI(); }
+    renderLair();
+  }, 10000);
+
+  function buy(type, amount, price) {
+    if (state.coins < price) return alert('Не хватает монет!');
+    state.coins -= price;
+    if (type === 'candy') state.candies += amount;
+    updateUI(); saveGame();
+  }
+
+  // --- ЗАПУСК ---
+  loadGame();
+
+</script>
+</body>
+</html>
